@@ -1,0 +1,64 @@
+version: "3.5"
+
+services:
+  gitea:
+    image: gitea/gitea:1
+    container_name: gitea
+    restart: unless-stopped
+    environment:
+      - USER_UID=$UID
+      - USER_GID=$GID
+      - ROOT_URL=https://$URL
+      - HTTP_PORT=3000
+      - DB_TYPE=mysql
+      - DB_HOST=gitea_db:3306
+      - DB_NAME=gitea
+      - DB_USER=gitea
+      - DB_PASSWD=$MYSQL_GITEA_PASSWD
+    volumes:
+      - ./data/app:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea-http.rule=Host(`$URL`)
+      - traefik.http.routers.gitea-http.entrypoints=http
+      - traefik.http.routers.gitea-http.middlewares=redirect
+      - traefik.http.routers.gitea-https.rule=Host(`$URL`)
+      - traefik.http.routers.gitea-https.entrypoints=https
+      - traefik.http.routers.gitea-https.tls.certresolver=letsEncrypt
+      - traefik.http.routers.gitea-https.tls=true
+      - traefik.http.middlewares.redirect.redirectscheme.scheme=https
+      - traefik.http.services.gitea.loadbalancer.server.port=3000
+    networks:
+      - gitea_net
+      - traefik_net
+    depends_on:
+       - gitea_db
+
+  gitea_db:
+    image: ghcr.io/linuxserver/mariadb
+    container_name: gitea_db
+    restart: unless-stopped
+    environment:
+       - PUID=$UID
+       - PGID=$GID
+       - MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
+       - TZ=$TZ
+       - MYSQL_DATABASE=gitea
+       - MYSQL_USER=gitea
+       - MYSQL_PASSWORD=$MYSQL_GITEA_PASSWD
+    volumes:
+       - ./data/db:/config
+    networks:
+       - gitea_net
+
+networks:
+    traefik_net:
+      external: true
+    gitea_net:
+      name: gitea_net
+      external: false
