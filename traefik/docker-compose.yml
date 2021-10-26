@@ -1,0 +1,37 @@
+version: '3.5'
+
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik-https.rule=Host(`$URL`)
+      - traefik.http.routers.traefik-https.entrypoints=https
+      - traefik.http.routers.traefik-https.tls=true
+      - traefik.http.routers.traefik-https.tls.certResolver=letsEncrypt
+      - traefik.http.routers.traefik-https.service=api@internal
+      - traefik.http.routers.traefik-https.middlewares=traefik-auth
+      - traefik.http.middlewares.traefik-auth.basicauth.users=your_user
+      - traefik.http.routers.traefik-http.rule=Host(`$URL`)
+      - traefik.http.routers.traefik-http.entrypoints=http
+      - traefik.http.routers.traefik-http.middlewares=https-redirect
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+    volumes:
+      - ./data/traefik.yml:/etc/traefik/traefik.yml
+      - ./data/acme/acme.json:/etc/traefik/acme/acme.json
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik_net
+    environment:
+      - GODADDY_API_KEY=$GODADDY_API_KEY
+      - GODADDY_API_SECRET=$GODADDY_API_SECRET
+
+networks:
+    traefik_net:
+      external: true
