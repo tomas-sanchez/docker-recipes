@@ -1,0 +1,47 @@
+version: "3.5"
+
+services:
+  healthchecks:
+    image: ghcr.io/linuxserver/healthchecks
+    container_name: healthchecks
+    restart: unless-stopped
+    environment:
+      - PUID=$UID
+      - PGID=$GID
+      - DOCKER_MODS=linuxserver/mods:healthchecks-apprise
+      - SITE_ROOT=https://$URL
+      - SITE_NAME=HealthChecks
+      - DEFAULT_FROM_EMAIL=your@email.com
+      - EMAIL_HOST=smtp server
+      - EMAIL_PORT=587
+      - EMAIL_HOST_USER=$EMAIL_HOST_USER
+      - EMAIL_HOST_PASSWORD=$EMAIL_HOST_PASSWORD
+      - EMAIL_USE_TLS=True
+      - ALLOWED_HOSTS=*
+      - SUPERUSER_EMAIL=superuser@email.com
+      - SUPERUSER_PASSWORD=$SUPERUSER_PASSWORD
+      - REGENERATE_SETTINGS=False
+      - SECRET_KEY="your_secret_key"
+      - USE_PAYMENTS=False
+      - REGISTRATION_OPEN=False
+      - APPRISE_ENABLED=True
+    volumes:
+      - ./data:/config
+    ports:
+      - 8002:8000
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.healthchecks-http.rule=Host(`$URL`)
+      - traefik.http.routers.healthchecks-http.entrypoints=http
+      - traefik.http.routers.healthchecks-http.middlewares=redirect
+      - traefik.http.routers.healthchecks-https.rule=Host(`$URL`)
+      - traefik.http.routers.healthchecks-https.entrypoints=https
+      - traefik.http.routers.healthchecks-https.tls.certresolver=letsEncrypt
+      - traefik.http.routers.healthchecks-https.tls=true
+      - traefik.http.middlewares.redirect.redirectscheme.scheme=https
+    networks:
+      - traefik_net
+
+networks:
+    traefik_net:
+      external: true
